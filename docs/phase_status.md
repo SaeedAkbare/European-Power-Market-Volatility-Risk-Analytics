@@ -1,5 +1,10 @@
 # Execution record
 
+**Historical baseline record.** The subsequent upgrade integrated real SMARD fundamentals,
+calibration, renewable portfolios and executed research notebooks. See
+`upgrade_execution.md` for current status. Statements below describe the original build,
+not the upgraded project's current limitations or publication state.
+
 Build date: 19 November 2026. Data budget used: €0. Repository prepared locally; no
 remote repository was created and no files were published. Actual report values are
 stored in machine-readable files; there are no synthetic findings.

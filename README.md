@@ -1,143 +1,153 @@
 # European Power Market Volatility & Risk Analytics
+### Germany case study: fundamentals, price tails and commercial exposure
 
-**German electricity market · free public data · reproducible Python research**
+**What drives German electricity price risk, what can be forecast, and what does it mean
+for purchasers and renewable generators?** This reproducible Python project connects
+actual demand, wind, solar, conventional generation and cross-border conditions to
+DE-LU day-ahead prices, then tests probabilistic forecasts and hypothetical portfolios.
+**Data budget: €0. Local execution. No invented market observations.**
 
-Electricity procurement and generation exposures depend on delivery-hour price tails,
-negative-price episodes and persistent volatility—not just average prices. This project
-turns official German day-ahead observations into auditable historical risk reports and
-hypothetical commercial exposure scenarios. Total data budget: **€0**. All calculations
-run locally; no subscription, cloud service or private position data is required.
+**Observed period:** 1 January 2023–18 November 2026. **Source:** Bundesnetzagentur | SMARD.de.
+63,843 native price intervals; 136,128 quarter-hours per core physical series; 34,032
+complete hourly comparisons. Price and core physical series have no missing observations.
 
-## Evidence and current scope
+| Verified evidence | Commercial interpretation |
+|---|---|
+| Upper/lower residual-load quartiles: **€147.32 / €34.10 per MWh** | Average-price budgets conceal substantial conditional price differences. |
+| High/low midday solar groups: **€21.34 / €109.39 per MWh** | Production-price coincidence matters for renewable revenue assumptions. |
+| High/low demand groups: **7.48% / 0.42%** incidence of prices ≥€200/MWh | High-demand periods have disproportionate observed spike exposure. |
+| Boosting 80% interval coverage: **68.6% → 78.2%** after past-error calibration | Reliability improves with wider intervals; probability calibration is not uniformly better. |
 
-The live audit retrieved **63,843 native DE-LU price intervals** covering local delivery
-dates **1 January 2023–18 November 2026**, with **zero missing observations or duplicates**.
-Source: **Bundesnetzagentur | SMARD.de**. The hourly/quarter-hourly transition is explicit.
+Physical comparisons are descriptive quartiles, not causal effects. Calibration figures
+use the **same 16,488 evaluation hours from 2025 onward**. Detailed methods, sample sizes
+and seven-day block confidence intervals accompany every finding.
 
-| Historical result | Value |
-|---|---:|
-| Complete hourly-equivalent observations | 34,032 |
-| Mean hourly-equivalent price | €95.24/MWh |
-| Native minimum / maximum | −€500.00 / €936.28 per MWh |
-| Negative-price duration | 1,797.75 hours |
-| Negative share of delivery time | 5.28% |
-| Consecutive negative-price episodes | 376 |
-| Mean complete-day hourly price spread | €121.68/MWh |
+[**Two-page executive report**](reports/executive_market_analysis.pdf) ·
+[CV summary](docs/cv_project_summary.md) · [Interview preparation](docs/interview_preparation.md) ·
+[Research notebooks](notebooks) · [Execution and limitations](docs/upgrade_execution.md)
 
-These figures are generated in `reports/market_summary.json`, not illustrative data.
-After 1 October 2025, hourly averaging can hide quarter-hour extremes. Native intervals
-are retained for negative-duration and portfolio calculations. The requested audit end
-is exclusive 19 November 2026; no future observations enter the research period.
+![Observed residual-load price relationship](reports/residual_load_price_relationship.png)
 
-![Historical delivery-hour volatility](reports/volatility_heatmap.png)
-![Price distribution](reports/price_distribution.png)
+## Research and business relevance
 
-The project answers Q1 (when volatility varies), identifies Q2 extreme events, implements
-Q4 interpretable regimes, evaluates Q5 price-only exploratory forecasts, and supplies Q6
-hypothetical portfolio risk. **Q2 fundamental explanations and Q3 driver relationships
-remain incomplete**: no ENTSO-E token was supplied. The raw XML connector and retrospective
-analysis functions are provided, but fuel-category parsing, full fundamental integration
-and point-in-time vintage verification require real authenticated data. No missing
-fundamental observations, model accuracies or causal findings are invented.
+- **Price formation:** actual/forecast residual load, conditional distributions,
+  calendar-controlled explanatory models, chronological holdout and permutation importance.
+- **Volatility:** delivery-hour anomalies, rolling dispersion, negative/positive episodes,
+  descriptive regimes and clustering diagnostics. Native quarter-hour analysis identifies
+  **101 hours hiding a negative quarter** and **357 hiding a positive spike** in hourly means.
+- **Forecast discipline:** seasonal benchmark, linear quantile regression and gradient
+  boosting; walk-forward pinball/MAE, Brier/AP, reliability curves, coverage, width and
+  hour/season breakdowns. Calibration uses earlier out-of-sample errors only.
+- **Commercial risk:** hypothetical flat purchaser and national solar/wind-shaped
+  exposures, interval-correct P&L, VaR/ES, seasonal/regime comparisons and capture prices.
+  Solar capture is **€56.60/MWh**, wind **€82.34/MWh**, versus **€95.24/MWh** baseload.
 
-## Reproduce
+![Calibration comparison](reports/calibration_comparison.png)
+![Renewable capture prices](reports/capture_price_comparison.png)
 
-Python 3.11+; commands run from this repository directory:
+## What is verified—and what is not
+
+SMARD's official field catalogue identifies the data IDs, units and forecast categories.
+Actual and day-ahead forecast load/onshore wind/offshore wind/solar are stored separately.
+Other verified series include gas, coal, lignite, hydro, biomass, other generation,
+French/Dutch prices, and French-border commercial exchanges and physical flows.
+Nuclear has extensive gaps; French physical flows have 33 missing quarter-hours each.
+Missing observations remain missing. Germany physical data are not identical to DE-LU zone totals.
+
+**Fundamental-enhanced pre-auction forecasting remains blocked.** The retrieved forecast
+snapshots lack original publication/vintage timestamps, and generation forecasts may
+arrive after the D−1 11:00 Berlin cutoff. No actual delivery-day fundamental is used as a
+prospective feature. The comparison file records the blocked model without invented metrics.
+Price-only forecasts also remain exploratory because source revisions are not reconstructed.
+
+The optional ENTSO-E connector is implemented but has not been live-tested with a token.
+Open-Meteo coverage remains a three-location, one-week sample; weather is not used in
+forecast models. Its hosted free tier is non-commercial. No paid fuels, curves, exchange
+datasets or cloud services are required.
+
+## Reproduce locally
+
+Python 3.11+; run commands from the repository root. On Windows:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,presentation]'
+$env:OMP_NUM_THREADS='2'
+$env:OPENBLAS_NUM_THREADS='2'
 power-risk audit --start 2023-01-01 --end 2026-11-19
+power-risk fundamentals --start 2023-01-01 --end 2026-11-19
 power-risk analyze
 python -c "from power_risk.regimes.model import run; run()"
-python -c "from power_risk.fundamentals.analysis import run; run()"
-power-risk forecast
-# Optional full three-model comparison:
 power-risk forecast --advanced
 power-risk portfolio
+python scripts/reproduce_upgrade.py
+python scripts/build_showcase.py
+python scripts/build_research_notebooks.py
+python scripts/execute_notebooks.py
 python -m streamlit run dashboards/app.py
-python -m pytest -q
-python -m ruff check .
 ```
 
-On Linux/macOS activate with `source .venv/bin/activate`. The first audit downloads about
-four years of weekly chunks; later runs reuse raw responses without network requests.
-To refresh, use a new raw-cache directory or explicitly refresh individual HTTP queries.
-For the observed Windows PyArrow DLL loading issue, `pip install -e '.[parquet-fallback]'`
-installs Fastparquet. `requirements-lock.txt` records the build environment versions;
-it is an environment snapshot, not a cross-platform binary lock.
+On Linux/macOS use `source .venv/bin/activate` and
+`export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2`. Presentation dependencies are optional
+for core calculations: install `.[dev]` to omit PDF/notebook authoring. A compatible
+Windows Parquet fallback is available via `pip install -e '.[parquet-fallback]'`.
+`requirements-lock.txt` records the actual environment, not a universal platform lock.
 
-The dashboard has five pages: market overview, volatility, fundamentals, forecasting and
-portfolio risk. Missing inputs produce explicit unavailable states. Custom exposure CSVs
-support columns `price_eur_mwh,exposure_mw,duration_hours`; the default historical sampler
-uses a flat 1 MW, 24-hour UTC purchase against €100/MWh. This reference is an assumption,
-not a traded contract or an optimal hedge.
+The first data retrieval downloads weekly provider responses. A shared request limiter,
+retries and persistent hash-checked cache support repeat runs. Once downloaded, the
+research/report workflow uses local files only. `scripts/reproduce_upgrade.py --download`
+also retrieves/reuses fundamentals. `power-risk forecast` without `--advanced` is a
+lightweight seasonal baseline and replaces the original model comparison with that subset.
 
-The executed three-model comparison contains 25,272 evaluation hours per model. Boosting
-has median pinball loss 14.64 versus 18.30 EUR/MWh for the seasonal benchmark, but nominal
-80% interval coverage is only 69.5% versus 77.1%. **Lower loss does not imply adequate tail
-calibration.** See [executive assessment](reports/executive_market_risk_report.md) and
-`reports/model_comparison.csv`. For faster full-model execution set `OMP_NUM_THREADS=2`
-and `OPENBLAS_NUM_THREADS=2` before starting Python.
+```powershell
+python -m pytest -q
+python -m ruff check .
+python scripts/dashboard_smoke.py
+```
 
-## Sources, permissions and availability
+Dashboard pages: observed market overview; volatility/events/native intervals; fundamental
+drivers; forecasting/calibration; commercial risk. Labels separate observed, modelled
+and hypothetical results. Notebook and dashboard execution use local kernel sockets.
 
-See [source audit and access instructions](docs/data_sources.md),
-[availability inventory](reports/data_availability_report.csv) and
-[input/output contracts](docs/data_contracts.md). SMARD observations require attribution;
-its current terms flag an ongoing wholesale-price licensing review. Open-Meteo's hosted
-free tier is non-commercial; only three-location, one-week reanalysis/stitched-forecast
-samples were tested. Those samples are not a full historical weather audit or issue-time
-forecasts. ENTSO-E access is free but requires registration and a token; each data category
-must be checked against the provider's reuse terms.
+## Methods and contracts
 
-Official links: [SMARD data use](https://www.smard.de/en/datennutzung),
-[ENTSO-E token instructions](https://transparencyplatform.zendesk.com/hc/en-us/articles/12845911031188-How-to-get-security-token),
-[Open-Meteo terms](https://open-meteo.com/en/terms).
+Quarter-hour energy **MWh / 0.25 = MW**. Hourly physical means require four observed
+quarters. Residual load = load − onshore wind − offshore wind − solar, with every component
+present. UTC intervals preserve DST; local delivery dates drive day-level comparisons.
+SMARD imports are negative in raw directional chart series: normalized imports are positive
+into Germany; net import = import − export. Physical flows and commercial exchanges are separate.
 
-Raw JSON/XML are cached with SHA256 hashes and retrieval metadata. Raw/processed data,
-credentials and virtual environments are excluded from Git. MIT applies to code only.
+2023 calibrates volatility-state thresholds; later state transitions are descriptive.
+The original forecast experiment has 35 monthly folds. Enhanced calibration uses 2024
+to initialize a rolling 90-day archive of past out-of-sample errors, with common evaluation
+from 2025. Earlier evaluation months enter later calibration windows only after they are
+known. Interval expansion never uses the current test month's labels. Seven-day moving
+block bootstrap (500 fixed-seed draws) addresses some serial dependence, not structural breaks.
 
-## Methods and interpretation
+Generator P&L = (spot − reference) × MW × hours; purchaser reverses sign. Loss = −P&L.
+VaR is an empirical loss quantile; ES integrates the worst tail with fractional mass.
+Renewable profiles are German aggregate shapes normalized to 1 MW **observed peak**, not
+plant capacity factors. Capture price = Σ(price × MWh)/ΣMWh. Scenarios are complete local
+days, including 23/25-hour DST days. No real trading profits or optimal hedge claims.
 
-- **Volatility:** levels, absolute changes, complete-day max−min spreads, 7-day rolling
-  standard deviations and delivery-hour/season profiles. Log returns are inappropriate
-  when prices can be zero or negative. Bollinger bands and daily-range ATR are descriptive
-  comparisons, not exchange-traded OHLC indicators or hedging rules.
-- **Events:** fixed positive threshold €200/MWh, negative prices below zero, absolute
-  hourly ramps ≥€100/MWh, trailing 99th percentiles and prior-hour seasonal anomalies.
-  Quantile thresholds use a shifted 90-day window with 30-day warm-up. Negative runs
-  terminate at missing or noncontiguous intervals.
-- **Drivers:** residual load = load − onshore wind − offshore wind − solar. The provided
-  module uses complete aligned observations, Spearman association, linear regression and
-  a nonlinear holdout model. It produces no findings without validated inputs; these
-  descriptive relationships would not establish causality.
-- **Regimes:** Low/Normal/Elevated/Extreme use 2023 25th/75th/95th percentile cutpoints
-  of lagged 7-day volatility. Evaluation starts in 2024; no retrospective smoothing.
-  Overlapping rolling windows mechanically increase hourly persistence.
-- **Forecasts:** monthly walk-forward fits, seasonal historical benchmark, linear
-  quantile regression (fixed recent 90-day window) and gradient boosting. Calendar and ≥48-hour-lagged prices only.
-  Quantile loss, 80% coverage, Brier scores, average precision and reliability bins are
-  evaluated out of sample, with hour/season breakdowns. Model settings are fixed rather
-  than optimized against the evaluation sample. Results are exploratory because source
-  revision/publication history is unverified. They are not executable trading evidence.
-- **Portfolio:** purchase P&L=(reference−price)×MW×hours; generation reverses the sign.
-  Loss=−P&L. VaR is an empirical loss quantile; ES integrates the worst tail with fractional
-  probability mass. Historical complete-day blocks preserve intraday dependence but
-  assume the historical sample represents the chosen horizon. Stress prices are explicitly
-  hypothetical. Marginal price quantiles are not treated as independent portfolio paths.
+## Evidence, source terms and project status
 
-## Outputs and engineering
+- [Quantified findings](reports/quantified_market_findings.csv), [driver research](reports/fundamental_driver_analysis.html),
+  [data quality](reports/fundamental_data_quality.csv), [official field catalogue](reports/smard_field_catalog.json).
+- [Enhanced forecasts](reports/model_comparison_enhanced.csv), [calibration windows](reports/calibration_windows.csv),
+  [fundamental forecast status](reports/price_only_vs_fundamental.csv), [portfolio cases](reports/portfolio_risk_enhanced.csv).
+- [Source access and terms](docs/data_sources.md), [data contracts](docs/data_contracts.md),
+  [baseline audit](reports/repository_improvement_audit.md), [upgrade execution record](docs/upgrade_execution.md).
 
-Reusable modules live in `src/power_risk/`; six notebooks present module outputs. Reports
-include quality diagnostics, historical metrics, event tables, regimes, model validation,
-portfolio risk and an executive interpretation. See [phase execution record](docs/phase_status.md)
-for commands, checks, coverage and remaining work. CI runs offline tests and Ruff; no
-network data downloads or secret token is required for tests.
+Original price and forecast reports remain as the baseline. Enhanced outputs have distinct
+filenames, except the formerly unavailable fundamental report, which now contains real analysis.
+Seven notebooks include questions, methods, actual charts, quantitative interpretation and limitations.
+Tests cover ingestion failures, cache integrity, missing/duplicate timestamps, DST, MTU changes,
+residual load, publication eligibility, direction, calibration separation, P&L and capture prices.
 
-Main limitations: incomplete fundamentals and historical forecast vintages; sample-only
-weather audit; no causal identification; no confidence intervals for differences between
-forecast models; no advanced latent-state comparison; no validated commercial trading
-strategy. The public repository is available at
-[SaeedAkbare/European-Power-Market-Volatility-Risk-Analytics](https://github.com/SaeedAkbare/European-Power-Market-Volatility-Risk-Analytics).
+Code is MIT-licensed; source data retain provider terms. Attribution: **Bundesnetzagentur |
+SMARD.de**. SMARD's current terms flag an ongoing wholesale-price licensing review. Raw
+and processed observations, credentials and the local environment are excluded from Git;
+analytical reports and figures are included. Recheck provider terms for a commercial reuse.
+No causal, guaranteed-calibration, executable-strategy or professional trading-experience claim is made.

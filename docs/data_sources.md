@@ -1,5 +1,47 @@
 # Free data verification — 19 November 2026
 
+## Upgrade: SMARD physical fundamentals now verified
+
+The original price audit below is retained. The upgrade also retrieved 22 SMARD series
+over 1 January 2023–18 November 2026. See `reports/fundamental_data_quality.csv` and
+`reports/fundamental_provenance.json` for observed coverage and raw-source URLs/retrievals.
+The official configuration is cached and published as `reports/smard_field_catalog.json`:
+https://www.smard.de/app/chart_configuration/market_data_configuration.json
+
+The catalogue confirms units, Germany region eligibility and day-ahead versus intraday
+categories. IDs 410/411 are actual/forecast load; 4067/1225/4068 are actual onshore wind,
+offshore wind and solar; 123/3791/125 are the separate day-ahead forecasts (not intraday
+5127/5128/5126). Raw quarter-hour MWh are converted to MW by multiplying by four.
+Conventional/other generation includes 4071 gas, 4069 hard coal, 1223 lignite, 1226 hydro,
+4066 biomass, 1227 other conventional, 1228 other renewable and 1224 nuclear.
+
+France 254 and Netherlands 256 are neighboring prices. French commercial export/import
+are 4404/4546; physical export/import 4737/4881. Raw chart imports have negative signs;
+normalization explicitly reverses import sign to positive magnitudes into Germany.
+Net import = import − export. These observed commercial exchanges are not represented
+as verified pre-clearing day-ahead schedules. Physical flows are not trade schedules.
+
+All core load/renewable series have 136,128 observations. Nuclear has 37,874; each French
+physical-flow series has 136,095 (33 missing). Nuclear is excluded from explanatory models.
+Every other selected series has full requested coverage. None of these gaps is zero-filled.
+Physical area is Germany; the dependent price is DE-LU. Some generation is provider-estimated.
+
+Official definitions and timing:
+- https://www.smard.de/en/electricity-market-explained-generation-and-consumption-204522
+- https://www.smard.de/page/en/wiki-article/6080/206318
+- https://www.smard.de/page/en/wiki-article/6138/6140/electricity-trade-and-physical-flow-of-electricity
+
+The forecast documentation describes load forecasts before the auction and generation
+forecasts that may arrive by 18:00 Brussels time. Chart snapshots do not retain original
+issue/publication timestamps or original revisions. Neither a category label nor the
+provider's generic timing rule proves that the retrieved vintage was available at 11:00.
+Accordingly, actual/forecast residual load is available retrospectively, while the
+fundamental-enhanced point-in-time forecasting comparison remains explicitly blocked.
+
+All retrieval is free and keyless, using a shared limit of at most four request starts
+per second, retries and immutable cached bodies unless explicitly refreshed. This is a
+client restraint, not a claim about an official numerical API rate allowance.
+
 The executable inventory is `reports/data_availability_report.csv`. `verification_status`
 uses VERIFIED, PARTIALLY_VERIFIED, UNAVAILABLE or NOT_TESTED. VERIFIED applies only to
 the stated retrieval window and fields, never to a provider's entire archive.

@@ -1,5 +1,10 @@
 # German electricity market: executive risk assessment
 
+**Preserved baseline assessment.** The upgraded research now includes real SMARD physical
+fundamentals, improved calibration and renewable portfolios. Use
+`executive_market_analysis.pdf` for the current two-page report. Baseline price statistics
+below remain valid; the former fundamental-data gap has been addressed.
+
 **Scope:** genuine SMARD DE-LU day-ahead prices, 1 January 2023–18 November 2026.
 Source: Bundesnetzagentur | SMARD.de. €0 data expenditure. All 63,843 expected native
 intervals were retrieved with no missing prices or duplicates.

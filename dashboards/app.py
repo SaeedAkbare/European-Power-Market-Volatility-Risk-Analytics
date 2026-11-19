@@ -44,26 +44,58 @@ elif page == "Volatility Monitor":
     if Path("reports/regime_transitions.csv").exists():
         st.caption("Lagged volatility states; cutpoints fixed using 2023 calibration.")
         st.dataframe(pd.read_csv("reports/regime_transitions.csv", index_col=0))
+    if Path("reports/intrahour_metrics.csv").exists():
+        st.subheader("Observed native quarter-hour risk")
+        native = pd.read_csv("reports/intrahour_metrics.csv", index_col=0, parse_dates=True)
+        st.line_chart(native[["min", "mean", "max"]].tail(24 * 14))
+        st.caption("Min/max are genuine quarter-hour prices within each hour; mean is the hourly-equivalent price. Averaging conceals intrahour events.")
 elif page == "Fundamental Drivers":
-    st.subheader("Retrospective associations — ENTSO-E integration pending")
-    st.info("No validated fundamental observations are bundled. A free ENTSO-E token and category-specific validation are required. No driver findings are inferred from prices alone.")
-    st.dataframe(pd.read_csv("reports/data_availability_report.csv"))
+    st.subheader("Observed German physical fundamentals")
+    if not Path("data/processed/fundamentals_hourly.parquet").exists():
+        st.info("Run power-risk fundamentals to retrieve free SMARD inputs.")
+        st.stop()
+    fundamentals = load("data/processed/fundamentals_hourly.parquet")
+    columns = ["actual_load_mw", "actual_residual_load_mw", "actual_wind_onshore_mw", "actual_wind_offshore_mw", "actual_solar_mw"]
+    st.line_chart(fundamentals[columns].tail(24 * 14) / 1000, y_label="GW")
+    st.caption("DE physical area; DE-LU price area. Actual and forecast series remain separate. Provider estimates and revised snapshots may be included.")
+    if Path("reports/quantified_market_findings.csv").exists():
+        st.dataframe(pd.read_csv("reports/quantified_market_findings.csv"))
+        st.image("reports/residual_load_price_relationship.png")
+        st.image("reports/renewable_price_analysis.png")
+    st.dataframe(pd.read_csv("reports/fundamental_data_quality.csv"))
+    st.warning("These are retrospective associations, not causal estimates or forecasts available before clearing.")
 elif page == "Probabilistic Forecasting":
     st.subheader("Exploratory historical forecasts")
     st.warning("Source publication/revision history is unverified. This backtest is not an executable trading strategy.")
-    frame = load("reports/price_risk_forecasts.parquet")
+    enhanced = Path("reports/price_risk_forecasts_enhanced.parquet").exists()
+    frame = load("reports/price_risk_forecasts_enhanced.parquet" if enhanced else "reports/price_risk_forecasts.parquet")
     model = st.selectbox("Model", sorted(frame.model.unique()))
     selection = frame.loc[frame.model.eq(model)].tail(24 * 14)
     st.line_chart(selection[["actual", "q10", "q50", "q90"]])
     st.line_chart(selection[["p_negative", "p_spike"]])
-    st.dataframe(pd.read_csv("reports/model_comparison.csv"))
-    st.dataframe(pd.read_csv("reports/probability_calibration.csv"))
+    st.dataframe(pd.read_csv("reports/model_comparison_enhanced.csv" if enhanced else "reports/model_comparison.csv"))
+    st.dataframe(pd.read_csv("reports/probability_calibration_enhanced.csv" if enhanced else "reports/probability_calibration.csv"))
+    if enhanced:
+        st.caption("2025 onward common test sample; each calibration window uses only earlier out-of-sample errors. Wider intervals improve coverage but probability calibration is not uniformly better.")
+        st.dataframe(pd.read_csv("reports/price_only_vs_fundamental.csv"))
 else:
     st.subheader("Hypothetical portfolio scenarios")
     side = st.selectbox("Position", ["purchase", "generation"])
     exposure = st.number_input("Flat exposure (MW)", min_value=0., value=1.)
     reference = st.number_input("Contract/reference price (EUR/MWh)", value=100.)
     confidence = st.slider("VaR / ES confidence", .90, .99, .95)
+    if Path("reports/portfolio_scenario_comparison.csv").exists():
+        st.subheader("Purchaser versus renewable-shaped portfolios")
+        case = st.selectbox("Commercial case", ["purchaser", "solar", "wind"])
+        observations = pd.read_csv("reports/portfolio_scenario_comparison.csv")
+        observations = observations.loc[observations.case.eq(case)].copy()
+        sign = -1 if case == "purchaser" else 1
+        observations["pnl_eur"] = sign * (observations.spot_cash_eur - reference * observations.energy_mwh) * exposure
+        st.dataframe(pd.DataFrame([risk_summary(observations.pnl_eur, confidence)]))
+        capture = pd.read_csv("reports/renewable_capture_price_analysis.csv")
+        st.dataframe(capture.loc[capture.case.eq(case)])
+        st.caption("Renewable profiles follow observed German aggregate production, scaled to a 1 MW observed peak before applying the exposure multiplier. They are hypothetical, not plant returns. Enhanced cases use complete local days including DST; the legacy illustration below uses fixed UTC-day blocks.")
+        st.dataframe(pd.read_csv("reports/portfolio_risk_enhanced.csv").query("case == @case"))
     st.caption("Historical sampler: complete, nonoverlapping 24-hour UTC blocks; daily exposure shape is flat.")
     hourly = load("data/processed/prices_hourly.parquet")
     scenarios = daily_scenarios(hourly, exposure, reference, side)
